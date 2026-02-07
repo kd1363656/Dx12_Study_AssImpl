@@ -1,7 +1,8 @@
 #include <stdio.h>
+#include "App.h"
 
 int wmain(int args, wchar_t** argv, wchar_t** envp)
 {
-	printf("ハローワールド\n");
+	StartApp(TEXT("DirectX12入門"));
 	return 0;
 }
