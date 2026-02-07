@@ -4,6 +4,8 @@
 #include <Windows.h>
 #include <cassert>
 
+#include <d3dx12.h>
+
 Engine* g_Engine;
 
 bool Engine::Init(HWND hwnd, UINT windowWidth, UINT windowHeight)
@@ -45,6 +47,12 @@ bool Engine::Init(HWND hwnd, UINT windowWidth, UINT windowHeight)
 	if (!CreateRenderTarget())
 	{
 		assert(false && "レンダーターゲットの作成に失敗");
+		return false;
+	}
+
+	if (!CreateDepthStencil())
+	{
+		assert(false && "デプスステンシルの作成に失敗");
 		return false;
 	}
 
@@ -231,6 +239,66 @@ bool Engine::CreateRenderTarget()
 		m_pDevice->CreateRenderTargetView(m_pRenderTargets[i].Get(), nullptr, rtvHandle);
 		rtvHandle.ptr += m_RtvDescriptorSize;
 	}
+
+	return true;
+}
+
+bool Engine::CreateDepthStencil()
+{
+	// DSV用のディスクリプタヒープを作成する
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = 1;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	auto hr = m_pDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_pDsvHeap));
+
+	if (FAILED(hr))
+	{
+		assert(false && "DSV用ディスクリプタヒープの生成に失敗");
+		return false;
+	}
+
+	// ディスクリプタのサイズを取得
+	m_DsvDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	D3D12_CLEAR_VALUE dsvClearValue;
+	dsvClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvClearValue.DepthStencil.Depth = 1.0F;
+	dsvClearValue.DepthStencil.Stencil = 0;
+
+	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+	CD3DX12_RESOURCE_DESC resourceDesc(
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		0,
+		m_FrameBufferWidth,
+		m_FrameBufferHeight,
+		1,
+		1,
+		DXGI_FORMAT_D32_FLOAT,
+		1,
+		0,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+
+	hr = m_pDevice->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&dsvClearValue,
+		IID_PPV_ARGS(m_pDepthStencilBuffer.ReleaseAndGetAddressOf()));
+
+	if (FAILED(hr))
+	{
+		assert(false && "デプスステンシルビュー用のバッファの作成に失敗");
+		return false;
+	}
+
+	// ディスクリプタを作成
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_pDsvHeap->GetCPUDescriptorHandleForHeapStart();
+
+	m_pDevice->CreateDepthStencilView(m_pDepthStencilBuffer.Get(), nullptr, dsvHandle);
 
 	return true;
 }
