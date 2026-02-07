@@ -42,6 +42,12 @@ bool Engine::Init(HWND hwnd, UINT windowWidth, UINT windowHeight)
 		return false;
 	}
 
+	if (!CreateRenderTarget())
+	{
+		assert(false && "レンダーターゲットの作成に失敗");
+		return false;
+	}
+
 	// ビューポートとシザー矩形を生成
 	CreateViewPort   ();
 	CreateScissorRect();
@@ -199,4 +205,32 @@ void Engine::CreateScissorRect()
 	m_Scissor.right = m_FrameBufferWidth;
 	m_Scissor.top = 0;
 	m_Scissor.bottom = m_FrameBufferHeight;
+}
+
+bool Engine::CreateRenderTarget()
+{
+	// RTV用のディスクリプタヒープを作成する
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = FRAME_BUFFER_COUNT;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	auto hr = m_pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(m_pRtvHeap.ReleaseAndGetAddressOf()));
+	if (FAILED(hr))
+	{
+		assert(false && "レンダーターゲットの生成に失敗");
+		return false;
+	}
+
+	// ディスクリプタのサイズを取得
+	m_RtvDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_pRtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+	for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
+	{
+		m_pSwapChain->GetBuffer(i, IID_PPV_ARGS(m_pRenderTargets[i].ReleaseAndGetAddressOf()));
+		m_pDevice->CreateRenderTargetView(m_pRenderTargets[i].Get(), nullptr, rtvHandle);
+		rtvHandle.ptr += m_RtvDescriptorSize;
+	}
+
+	return true;
 }
