@@ -64,6 +64,79 @@ bool Engine::Init(HWND hwnd, UINT windowWidth, UINT windowHeight)
 	return true;
 }
 
+void Engine::BeginRender()
+{
+	// 現在のレンダーターゲットを更新
+	m_currentRenderTarget = m_pRenderTargets[m_CurrentBackBufferIndex].Get();
+
+	// コマンドを初期化して溜める準備をする
+	m_pAllocator[m_CurrentBackBufferIndex]->Reset();
+	m_pCommandList->Reset(m_pAllocator[m_CurrentBackBufferIndex].Get(), nullptr);
+
+	// ビューポートとシザー矩形を設定
+	m_pCommandList->RSSetViewports(1, &m_Viewport);
+	m_pCommandList->RSSetScissorRects(1, &m_Scissor);
+
+	// 現在のフレームのレンダーターゲットビューのディスクリプタヒープの開始アドレスを取得
+	auto currentRtvHandle = m_pRtvHeap->GetCPUDescriptorHandleForHeapStart();
+	currentRtvHandle.ptr += m_CurrentBackBufferIndex * m_RtvDescriptorSize;
+
+	// 深度ステンシルのディスクリプタヒープの開始アドレス取得
+	auto currentDsvHandle = m_pDsvHeap->GetCPUDescriptorHandleForHeapStart();
+
+	// レンダーターゲットが使用可能になるまで待つ
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_currentRenderTarget, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_pCommandList->ResourceBarrier(1, &barrier);
+
+	// レンダーターゲットを設定
+	m_pCommandList->OMSetRenderTargets(1, &currentRtvHandle, FALSE, &currentDsvHandle);
+
+	// レンダーターゲットをクリア
+	const float clearColor[] = {0.25F, 0.25F, 0.25F, 1.0F};
+	m_pCommandList->ClearRenderTargetView(currentRtvHandle, clearColor, 0, nullptr);
+
+	// 深度ステンシルビューをクリア
+	m_pCommandList->ClearDepthStencilView(currentDsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0F, 0, 0, nullptr);
+}
+
+void Engine::EndRender()
+{
+	// レンダーターゲットに書き込み終わるまで待つ
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_currentRenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	m_pCommandList->ResourceBarrier(1, &barrier);
+
+	// コマンドの記録を完了
+	m_pCommandList->Close();
+
+	// コマンドを実行
+	ID3D12CommandList* ppCmdLists[] = { m_pCommandList.Get() };
+	m_pQueue->ExecuteCommandLists(1, ppCmdLists);
+
+	// スワップチェーンを切り替え
+	m_pSwapChain->Present(1, 0);
+
+	// 描画完了を待つ
+	WaitRender();
+
+	// バックバッファー番号更新
+	m_CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+}
+
+ID3D12Device6* Engine::Device()
+{
+	return m_pDevice.Get();
+}
+
+ID3D12GraphicsCommandList* Engine::CommandList()
+{
+	return m_pCommandList.Get();
+}
+
+UINT Engine::CurrentBackBufferIndex()
+{
+	return m_CurrentBackBufferIndex;
+}
+
 bool Engine::CreateDevice()
 {
 	auto hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(m_pDevice.ReleaseAndGetAddressOf()));
@@ -301,4 +374,29 @@ bool Engine::CreateDepthStencil()
 	m_pDevice->CreateDepthStencilView(m_pDepthStencilBuffer.Get(), nullptr, dsvHandle);
 
 	return true;
+}
+
+void Engine::WaitRender()
+{
+	// 病が終了待ち
+	const UINT32 fenceValue = m_fenceValue[m_CurrentBackBufferIndex];
+	m_pQueue->Signal(m_pFence.Get(), fenceValue);
+	m_fenceValue[m_CurrentBackBufferIndex]++;
+
+	// 次のフレームの描画準備がまだであれば待機する
+	if (m_pFence->GetCompletedValue() < fenceValue)
+	{
+		// 完了時にイベントを設定
+		auto hr = m_pFence->SetEventOnCompletion(fenceValue, m_fenceEvent);
+		if (FAILED(hr))
+		{
+			return;
+		}
+
+		// 待機処理
+		if(WAIT_OBJECT_0 != WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE))
+		{
+			return;
+		}
+	}
 }
