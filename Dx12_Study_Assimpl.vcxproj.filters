@@ -4,6 +4,15 @@
     <Filter Include="Source">
       <UniqueIdentifier>{1ce1be6d-357f-4b6a-a4f6-e49bc8bdac69}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Asset">
+      <UniqueIdentifier>{bfcb94d1-d54b-4fac-bcd6-1cc5ed719bce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Asset\Shader">
+      <UniqueIdentifier>{31816838-9baa-45de-b0ef-e1d08e9264d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Asset\Shader\Simple">
+      <UniqueIdentifier>{e8241e63-66c9-4e58-8866-6428b12095ce}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\main.cpp">
@@ -53,5 +62,13 @@
     <ClInclude Include="Source\RootSignature.h">
       <Filter>Source</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Asset\Shader\Simple\SimpleVS.hlsl">
+      <Filter>Asset\Shader\Simple</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Simple\SimplePS.hlsl">
+      <Filter>Asset\Shader\Simple</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
