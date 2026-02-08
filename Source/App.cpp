@@ -136,6 +136,13 @@ void StartApp(const TCHAR* appName)
 		delete g_Engine;
 	}
 
+	if (g_Scene)
+	{
+		delete g_Scene;
+	}
+
+	DestroyWindow(g_hWnd);
+	
 	CoUninitialize();
 }
 
