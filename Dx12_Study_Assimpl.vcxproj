@@ -132,6 +132,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\App.cpp" />
+    <ClCompile Include="Source\ConstantBuffer.cpp" />
     <ClCompile Include="Source\Engine.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
@@ -140,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="Source\App.h" />
     <ClInclude Include="Source\ComPtr.h" />
+    <ClInclude Include="Source\ConstantBuffer.h" />
     <ClInclude Include="Source\Engine.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\ShaderStruct.h" />

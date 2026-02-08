@@ -11,3 +11,10 @@ struct Vertex
 	DirectX::XMFLOAT3 Tangent; // 接空間
 	DirectX::XMFLOAT4 Color; // 頂点色
 };
+
+struct alignas(256) Transform
+{
+	DirectX::XMMATRIX World; // ワールド行列
+	DirectX::XMMATRIX View; // ビュー行列
+	DirectX::XMMATRIX Proj; // 投影行列
+};

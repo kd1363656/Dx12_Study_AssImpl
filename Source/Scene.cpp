@@ -4,9 +4,11 @@
 #include <d3d12.h>
 #include "ShaderStruct.h"
 #include "VertexBuffer.h"
+#include "ConstantBuffer.h"
 
 Scene* g_Scene;
 VertexBuffer* vertexBuffer;
+ConstantBuffer* constantBuffer[Engine::FRAME_BUFFER_COUNT];
 
 Scene::~Scene()
 {
@@ -36,6 +38,29 @@ bool Scene::Init()
 	{
 		assert(false && "頂点バッファーの作成に失敗");
 		return false;
+	}
+
+
+	auto eyePos = DirectX::XMVectorSet(0.0F, 0.0F, 5.0F, 0.0F); // 視点の位置
+	auto targetPos = DirectX::XMVectorZero(); // 視点を向ける座標
+	auto upward = DirectX::XMVectorSet(0.0F, 1.0F, 0.0F, 0.0F); // 上方向を表すベクトル
+	auto fov = DirectX::XMConvertToRadians(37.5F); // 視野角
+	auto aspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT); // アスペクト比
+
+	for(size_t i = 0; i < Engine::FRAME_BUFFER_COUNT; i++)
+	{
+		constantBuffer[i] = new ConstantBuffer(sizeof(Transform));
+		if (!constantBuffer[i]->IsValid())
+		{
+			assert(false && "変換行列用定数バッファの生清に失敗\n");
+			return false;
+		}
+
+		// 変換行列の登録
+		auto ptr = constantBuffer[i]->GetPtr<Transform>();
+		ptr->World = DirectX::XMMatrixIdentity();
+		ptr->View = DirectX::XMMatrixLookAtRH(eyePos, targetPos, upward);
+		ptr->Proj = DirectX::XMMatrixPerspectiveFovRH(fov, aspect, 0.3F, 1000.0F);
 	}
 
 	printf("\nシーンの初期化に成功\n");
