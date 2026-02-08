@@ -39,6 +39,11 @@ ConstantBuffer::ConstantBuffer(size_t size)
 	m_IsValid = true;
 }
 
+ConstantBuffer::~ConstantBuffer()
+{
+
+}
+
 bool ConstantBuffer::IsValid()
 {
 	return m_IsValid;

@@ -5,16 +5,29 @@
 #include "ShaderStruct.h"
 #include "VertexBuffer.h"
 #include "ConstantBuffer.h"
+#include "RootSignature.h"
 
 Scene* g_Scene;
 VertexBuffer* vertexBuffer;
 ConstantBuffer* constantBuffer[Engine::FRAME_BUFFER_COUNT];
+RootSignature* rootSignature;
 
 Scene::~Scene()
 {
 	if (vertexBuffer)
 	{
 		delete vertexBuffer;
+	}
+
+	if (rootSignature)
+	{
+		delete rootSignature;
+	}
+
+	for (size_t i = 0; i < Engine::FRAME_BUFFER_COUNT; i++)
+	{
+		if (!constantBuffer[i]) { continue; }
+		delete constantBuffer[i];
 	}
 }
 
@@ -61,6 +74,13 @@ bool Scene::Init()
 		ptr->World = DirectX::XMMatrixIdentity();
 		ptr->View = DirectX::XMMatrixLookAtRH(eyePos, targetPos, upward);
 		ptr->Proj = DirectX::XMMatrixPerspectiveFovRH(fov, aspect, 0.3F, 1000.0F);
+	}
+
+	rootSignature = new RootSignature();
+	if (!rootSignature->IsValid())
+	{
+		assert(false && "ルートシグネチャ生成失敗");
+		return false;
 	}
 
 	printf("\nシーンの初期化に成功\n");
