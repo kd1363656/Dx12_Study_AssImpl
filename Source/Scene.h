@@ -5,7 +5,7 @@ class Scene
 public:
 
 	Scene() = default;
-	~Scene() = default;
+	~Scene();
 
 	bool Init(); // ‰Šú‰»
 
